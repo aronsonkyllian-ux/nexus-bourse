@@ -122,7 +122,7 @@
       <td>${eur(p.notional_eur, 0)}</td><td class="${cls(p.pnl_eur)}">${sg(p.pnl_eur, 2, " €")}<br><small>${sg(p.pnl_pct, 2, " %")}</small></td></tr>`).join("");
     const today = D.trades.filter(t => (t.closed_at || "").slice(0, 10) === (D.generated_at || "").slice(0, 10));
     $("#tab-port").innerHTML = `
-      <article class="panel"><div class="ph"><h2>POSITIONS OUVERTES</h2><span class="hint">${P.length} / ${r.max_open_positions || 2} max · clôture forcée 10 min avant la fin de séance</span></div>
+      <article class="panel"><div class="ph"><h2>POSITIONS OUVERTES</h2><span class="hint">${P.length} / ${(r.max_open_positions_if_protected && P.length && P.every(p => p.stop >= p.entry)) ? r.max_open_positions_if_protected : (r.max_open_positions || 2)} max · clôture forcée 10 min avant la fin de séance</span></div>
       ${P.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Entrée</th><th>Dernier</th><th>Stop</th><th>Objectif</th><th>Montant</th><th>P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>`
         : empty("Aucune position ouverte", "L'équipe n'achète que si les quatre analystes et le responsable du risque sont d'accord. Les candidats bloqués sont visibles dans Signaux.")}</article>
       <div class="grid2">
@@ -210,7 +210,7 @@
     ].map(([i, n, d]) => `<div class="agent"><div class="ic">${i}</div><div><h3>${n}</h3><p>${d}</p></div></div>`).join("");
     const rules = [
       [`${nf(r.max_position_pct, 0)} %`, "du capital maximum par position (≈ " + nf((D.capital.equity || 1000) * (r.max_position_pct || 35) / 100, 0) + " €)"],
-      [`${r.max_open_positions || 2}`, "positions ouvertes au maximum"],
+      [`${r.max_open_positions || 2}`, `positions ouvertes au maximum, ${r.max_open_positions_if_protected || 3} quand toutes les positions ouvertes ont leur stop au prix d'entrée`],
       [`${nf(r.risk_per_trade_pct, 1)} %`, "du capital risqué par trade (stop = 1,5 × ATR)"],
       [`${nf(r.reward_risk, 0)}R`, "objectif = deux fois le risque"],
       [`−${nf(r.daily_loss_limit_pct, 0)} %`, "perte du jour : plus aucune entrée"],
