@@ -13,6 +13,8 @@
   const day = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }) : "—";
   const px = (v, m) => v == null ? "—" : nf(v, v >= 1000 ? 1 : 2) + (m === "US" ? " $" : " €");
   const mk = m => `<span class="mk ${esc(m)}">${esc(m)}</span>`;
+  const LEG = {tp1:"TP1 (50 %)", tp2:"TP2", stop:"stop", vwap:"VWAP", session:"fin de séance", full:"sortie unique"};
+  const exitLab = t => (t.leg && LEG[t.leg] ? LEG[t.leg] + " · " : "") + (t.exit_reason || "");
   let D = null;
 
   /* ---------- onglets ---------- */
@@ -117,13 +119,18 @@
 
   function renderPortfolio() {
     const P = D.positions || [], r = D.rules || {};
-    const rows = P.map(p => `<tr><td class="sym">${esc(p.symbol)}${mk(p.market)}<small>${esc(p.name)} · ${esc(p.setup || "")} · ${hm(p.opened_at)}</small></td>
-      <td>${px(p.entry, p.market)}</td><td>${px(p.last, p.market)}</td><td class="dn">${px(p.stop, p.market)}</td><td class="up">${px(p.target, p.market)}</td>
+    const tgt = p => {
+      if (p.use_partial && (p.tp1 != null || p.tp2 != null))
+        return `${px(p.tp1, p.market)} / ${px(p.tp2, p.market)}<br><small>${p.tp1_done ? "TP1 fait · vers TP2" : "TP1 en attente"}</small>`;
+      return px(p.target, p.market);
+    };
+    const rows = P.map(p => `<tr><td class="sym">${esc(p.symbol)}${mk(p.market)}<small>${esc(p.name)} · ${esc(p.setup || "")} · ${hm(p.opened_at)}${p.exit_status ? " · " + esc(p.exit_status) : ""}</small></td>
+      <td>${px(p.entry, p.market)}</td><td>${px(p.last, p.market)}</td><td class="dn">${px(p.stop, p.market)}</td><td class="up">${tgt(p)}</td>
       <td>${eur(p.notional_eur, 0)}</td><td class="${cls(p.pnl_eur)}">${sg(p.pnl_eur, 2, " €")}<br><small>${sg(p.pnl_pct, 2, " %")}</small></td></tr>`).join("");
     const today = D.trades.filter(t => (t.closed_at || "").slice(0, 10) === (D.generated_at || "").slice(0, 10));
     $("#tab-port").innerHTML = `
-      <article class="panel"><div class="ph"><h2>POSITIONS OUVERTES</h2><span class="hint">${P.length} / ${(r.max_open_positions_if_protected && P.length && P.every(p => p.stop >= p.entry)) ? r.max_open_positions_if_protected : (r.max_open_positions || 2)} max · clôture forcée 10 min avant la fin de séance</span></div>
-      ${P.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Entrée</th><th>Dernier</th><th>Stop</th><th>Objectif</th><th>Montant</th><th>P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      <article class="panel"><div class="ph"><h2>POSITIONS OUVERTES</h2><span class="hint">${P.length} / ${(r.max_open_positions_if_protected && P.length && P.every(p => p.stop >= p.entry)) ? r.max_open_positions_if_protected : (r.max_open_positions || 2)} max · TP1 50 % à 1R, TP2 à 2,5R ou VWAP · clôture forcée 10 min avant la fin de séance</span></div>
+      ${P.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Entrée</th><th>Dernier</th><th>Stop</th><th>TP1 / TP2</th><th>Montant</th><th>P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>`
         : empty("Aucune position ouverte", "L'équipe n'achète que si les quatre analystes et le responsable du risque sont d'accord. Les candidats bloqués sont visibles dans Signaux.")}</article>
       <div class="grid2">
         <article class="panel"><div class="ph"><h2>AUJOURD'HUI</h2><span class="hint">${esc(day(D.generated_at))}</span></div>
@@ -148,7 +155,7 @@
         <span class="verdict ${esc(s.decision)}">${s.decision === "ACHAT" ? "ACHAT" : "VETO RISQUE"}</span></div>
       <div class="scores">${sc("Technique", s.tech)}${sc("News", s.news)}${sc("X", s.x)}${sc("Fondam.", s.fund)}${sc("Global", s.composite, 1)}</div>
       <ul class="reasons ${s.decision === "ACHAT" ? "ok" : ""}">${(s.reasons || []).map(r => `<li>${esc(r)}</li>`).join("")}</ul>
-      ${s.entry ? `<div class="meta" style="margin-top:6px">Plan : entrée ${px(s.entry, s.market)} · stop ${px(s.stop, s.market)} · objectif ${px(s.target, s.market)}</div>` : ""}
+      ${s.entry ? `<div class="meta" style="margin-top:6px">Plan : entrée ${px(s.entry, s.market)} · stop ${px(s.stop, s.market)} · ${s.tp1 != null ? `TP1 ${px(s.tp1, s.market)} (50 %) · TP2 ${px(s.tp2, s.market)}` : `objectif ${px(s.target, s.market)}`}</div>` : ""}
       ${s.why ? `<details class="why"><summary>AVIS DES ANALYSTES ▾</summary>
         <p><b>Technique :</b> ${esc(s.why.tech)}</p><p><b>News :</b> ${esc(s.why.news)}</p><p><b>X :</b> ${esc(s.why.x)}</p><p><b>Fondamentaux :</b> ${esc(s.why.fund)}</p></details>` : ""}
     </div>`).join("");
@@ -169,7 +176,7 @@
     const rows = T.map(t => `<tr><td class="sym">${esc(t.symbol)}${mk(t.market)}<small>${esc(t.name)} · ${esc(t.setup || "")}</small></td>
       <td>${dhm(t.opened_at)}<br><small class="mut">→ ${hm(t.closed_at)}</small></td><td>${px(t.entry_raw, t.market)}</td><td>${px(t.exit_raw, t.market)}</td>
       <td>${eur(t.notional_eur, 0)}</td><td>${eur(t.costs_eur)}</td><td class="${cls(t.pnl_eur)}">${sg(t.pnl_eur, 2, " €")}<br><small>${sg(t.pnl_pct, 2, " %")}</small></td>
-      <td style="text-align:left;color:var(--mut)">${esc(t.exit_reason || "")}</td></tr>`).join("");
+      <td style="text-align:left;color:var(--mut)">${esc(exitLab(t))}</td></tr>`).join("");
     $("#tab-jrnl").innerHTML = `<article class="panel"><div class="ph"><h2>JOURNAL DES TRADES</h2><span class="hint">${T.length} trade(s) clos · du plus récent au plus ancien</span></div>
       ${T.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Ouvert / clos</th><th>Entrée</th><th>Sortie</th><th>Montant</th><th>Frais</th><th>P&amp;L net</th><th style="text-align:left">Sortie</th></tr></thead><tbody>${rows}</tbody></table></div>`
         : empty("Aucun trade clos pour l'instant", "Le premier trade apparaîtra ici avec son entrée, sa sortie, les frais payés et le résultat net.")}</article>`;
@@ -206,13 +213,14 @@
       ["X", "Analyste X", `Suit les comptes crédibles (Reuters, Bloomberg, CNBC, WSJ…) sur le titre et le marché. Poids ${Math.round((w.x || .15) * 100)} %.`],
       ["FND", "Analyste fondamental", `Consensus des analystes, objectif de cours, PER et date des résultats. Poids ${Math.round((w.fundamentals || .2) * 100)} %.`],
       ["RSK", "Responsable du risque", `Droit de veto : score global ≥ ${D.min_score || 62}, indice au-dessus de son VWAP, pas de résultats imminents, objectif ≥ 3× les frais, perte du jour limitée, taille de position.`],
-      ["TRD", "Trader", "Exécute les ordres fictifs au dernier cours avec frais et glissement, suit stop et objectif à chaque barre, remonte le stop au point mort à +1R et clôture tout avant la fin de séance."],
+      ["TRD", "Trader", "Exécute les ordres fictifs au dernier cours avec frais et glissement. Sortie en deux temps : vente de 50 % à 1R (TP1), stop de la moitié restante à l'entrée + 0,3R, puis TP2 à 2,5R ou sortie si une barre 5 min clôture sous le VWAP. Si les frais du TP1 mangent le gain, sortie unique à 2R. Clôture tout 10 min avant la fin de séance."],
     ].map(([i, n, d]) => `<div class="agent"><div class="ic">${i}</div><div><h3>${n}</h3><p>${d}</p></div></div>`).join("");
     const rules = [
       [`${nf(r.max_position_pct, 0)} %`, "du capital maximum par position (≈ " + nf((D.capital.equity || 1000) * (r.max_position_pct || 35) / 100, 0) + " €)"],
       [`${r.max_open_positions || 2}`, `positions ouvertes au maximum, ${r.max_open_positions_if_protected || 3} quand toutes les positions ouvertes ont leur stop au prix d'entrée`],
       [`${nf(r.risk_per_trade_pct, 1)} %`, "du capital risqué par trade (stop = 1,5 × ATR)"],
-      [`${nf(r.reward_risk, 0)}R`, "objectif = deux fois le risque"],
+      [`TP1 ${nf(r.tp1_r != null ? r.tp1_r : 1, 1)}R`, "vente de " + nf((r.partial_fraction != null ? r.partial_fraction : 0.5) * 100, 0) + " % de la position (US et Europe)"],
+      [`TP2 ${nf(r.tp2_r != null ? r.tp2_r : 2.5, 1)}R`, "moitié restante, ou sortie si une barre 5 min clôture sous le VWAP ; stop remonte à l'entrée + " + nf(r.runner_stop_r != null ? r.runner_stop_r : 0.3, 1) + "R (si les frais du TP1 sont trop élevés : sortie unique à 2R)"],
       [`−${nf(r.daily_loss_limit_pct, 0)} %`, "perte du jour : plus aucune entrée"],
       ["0", "position gardée la nuit (day trading strict)"],
     ].map(([b, s]) => `<div class="rule"><b>${b}</b><span>${s}</span></div>`).join("");
