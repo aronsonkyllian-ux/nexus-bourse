@@ -239,7 +239,7 @@
     const box = $("#tab-crypto");
     if (!box) return;
     if (!C.enabled && C.enabled !== undefined && !C.start) {
-      box.innerHTML = `<article class="panel">${empty("Portefeuille crypto inactif", "Le carnet papier BTC/ETH n'est pas encore initialisé.")}</article>`;
+      box.innerHTML = `<article class="panel">${empty("Portefeuille crypto inactif", "Le carnet papier crypto n'est pas encore initialisé.")}</article>`;
       return;
     }
     const r = C.rules || {}, P = C.positions || [], T = C.trades || [], s = C.stats || {}, ses = C.session || {};
@@ -302,7 +302,7 @@
             <div class="kpi"><span>Réussite</span><b>${s.win_rate == null ? "—" : nf(s.win_rate, 0) + " %"}</b></div>
             <div class="kpi"><span>Bitcoin</span><b class="${cls(C.bench && C.bench.since_start_pct)}">${C.bench && C.bench.since_start_pct != null ? sg(C.bench.since_start_pct, 2, " %") : "—"}</b></div>
           </div>
-          <div class="note">Carnet fictif distinct des actions (1 000 €). BTC et ETH uniquement, day trading 7j/7, clôture forcée à 23h50 heure de Paris.</div>
+          <div class="note">Carnet fictif distinct des actions (1 000 €). ${(C.universe && C.universe.length) ? (C.universe.length + " cryptos suivies : " + C.universe.map(u => u.name || u.symbol).join(", ")) : "Liste de cryptos liquides"} · day trading 7j/7, clôture forcée à 23h50 heure de Paris. Achat uniquement.</div>
         </article>
         <article class="panel curve">
           <div class="ph"><h2>COURBE CRYPTO</h2><span class="hint">vs Bitcoin buy &amp; hold · % depuis le lancement</span></div>
