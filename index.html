@@ -42,6 +42,7 @@
 </nav>
 
 <div id="stale" class="stale" hidden></div>
+<div id="live-blotter" class="live-blotter" hidden></div>
 
 <main class="wrap">
   <section class="hero">
@@ -62,7 +63,7 @@
 
   <footer class="foot">
     Simulation papier : aucun argent réel, aucun ordre envoyé à un courtier. Actions : frais simulés Interactive Brokers (tarif Tiered). Crypto : frais simulés OKX Europe (taker 0,20 %, pas de minimum). Portefeuille crypto séparé.
-    Données actions : yfinance (US quasi temps réel, Europe ≈15 min de retard). Données crypto : cours 5 min publics, repli Yahoo. Heures de Paris. <span id="gen"></span>
+    Données actions : yfinance (US quasi temps réel, Europe ≈15 min de retard). Positions ouvertes : cours crypto en direct (tickers publics), actions via un relais ~30 s (Europe ≈15 min de retard bourse). Données crypto : klines 5 min publiques, repli Yahoo. Heures de Paris. <span id="gen"></span>
   </footer>
 </main>
 
@@ -75,6 +76,21 @@
   <button data-tab="crypto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5h4.2a1.8 1.8 0 0 1 0 3.6H9.5h4.4a1.8 1.8 0 0 1 0 3.6H9.2"/></svg>Crypto</button>
 </nav>
 
+<div id="pos-chart" class="pos-chart" hidden>
+  <div class="pos-chart-panel" role="dialog" aria-modal="true" aria-labelledby="pos-chart-title">
+    <header class="pos-chart-h">
+      <div>
+        <h2 id="pos-chart-title">—</h2>
+        <span class="hint" id="pos-chart-sub">bougies 5 minutes</span>
+      </div>
+      <div class="pos-chart-px" id="pos-chart-px"></div>
+      <button type="button" class="pos-chart-close" id="pos-chart-close" aria-label="Fermer">×</button>
+    </header>
+    <div class="pos-chart-canvas" id="pos-chart-canvas"></div>
+    <div class="pos-chart-legend" id="pos-chart-legend"></div>
+  </div>
+</div>
+<script src="vendor/lightweight-charts.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

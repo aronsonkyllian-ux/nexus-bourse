@@ -119,18 +119,10 @@
 
   function renderPortfolio() {
     const P = D.positions || [], r = D.rules || {};
-    const tgt = p => {
-      if (p.use_partial && (p.tp1 != null || p.tp2 != null))
-        return `${px(p.tp1, p.market)} / ${px(p.tp2, p.market)}<br><small>${p.tp1_done ? "TP1 fait · vers TP2" : "TP1 en attente"}</small>`;
-      return px(p.target, p.market);
-    };
-    const rows = P.map(p => `<tr><td class="sym">${esc(p.symbol)}${mk(p.market)}<small>${esc(p.name)} · ${esc(p.setup || "")} · ${hm(p.opened_at)}${p.exit_status ? " · " + esc(p.exit_status) : ""}</small></td>
-      <td>${px(p.entry, p.market)}</td><td>${px(p.last, p.market)}</td><td class="dn">${px(p.stop, p.market)}</td><td class="up">${tgt(p)}</td>
-      <td>${eur(p.notional_eur, 0)}</td><td class="${cls(p.pnl_eur)}">${sg(p.pnl_eur, 2, " €")}<br><small>${sg(p.pnl_pct, 2, " %")}</small></td></tr>`).join("");
     const today = D.trades.filter(t => (t.closed_at || "").slice(0, 10) === (D.generated_at || "").slice(0, 10));
     $("#tab-port").innerHTML = `
-      <article class="panel"><div class="ph"><h2>POSITIONS OUVERTES</h2><span class="hint">${P.length} / ${(r.max_open_positions_if_protected && P.length && P.every(p => p.stop >= p.entry)) ? r.max_open_positions_if_protected : (r.max_open_positions || 2)} max · TP1 50 % à 1R, TP2 à 2,5R ou VWAP · clôture forcée 10 min avant la fin de séance</span></div>
-      ${P.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Entrée</th><th>Dernier</th><th>Stop</th><th>TP1 / TP2</th><th>Montant</th><th>P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      <article class="panel"><div class="ph"><h2>POSITIONS OUVERTES</h2><span class="hint">${P.length} / ${(r.max_open_positions_if_protected && P.length && P.every(p => p.stop >= p.entry)) ? r.max_open_positions_if_protected : (r.max_open_positions || 2)} max · TP1 50 % à 1R, TP2 à 2,5R ou VWAP · clôture forcée 10 min avant la fin de séance · toucher une carte pour le graphique</span></div>
+      ${P.length ? `<div id="live-cards-port" class="live-cards"></div>`
         : empty("Aucune position ouverte", "L'équipe n'achète que si les quatre analystes et le responsable du risque sont d'accord. Les candidats bloqués sont visibles dans Signaux.")}</article>
       <div class="grid2">
         <article class="panel"><div class="ph"><h2>AUJOURD'HUI</h2><span class="hint">${esc(day(D.generated_at))}</span></div>
@@ -243,14 +235,7 @@
       return;
     }
     const r = C.rules || {}, P = C.positions || [], T = C.trades || [], s = C.stats || {}, ses = C.session || {};
-    const tgt = p => {
-      if (p.use_partial && (p.tp1 != null || p.tp2 != null))
-        return `${px(p.tp1, "CRYPTO")} / ${px(p.tp2, "CRYPTO")}<br><small>${p.tp1_done ? "TP1 fait · vers TP2" : "TP1 en attente"}</small>`;
-      return px(p.target, "CRYPTO");
-    };
-    const rows = P.map(p => `<tr><td class="sym">${esc(p.symbol)}${mk("CRYPTO")}<small>${esc(p.name)} · ${esc(p.setup || "")} · ${hm(p.opened_at)}${p.exit_status ? " · " + esc(p.exit_status) : ""}</small></td>
-      <td>${px(p.entry, "CRYPTO")}</td><td>${px(p.last, "CRYPTO")}</td><td class="dn">${px(p.stop, "CRYPTO")}</td><td class="up">${tgt(p)}</td>
-      <td>${eur(p.notional_eur, 0)}</td><td class="${cls(p.pnl_eur)}">${sg(p.pnl_eur, 2, " €")}<br><small>${sg(p.pnl_pct, 2, " %")}</small></td></tr>`).join("");
+
     const trows = T.slice().reverse().map(t => `<tr><td class="sym">${esc(t.symbol)}${mk("CRYPTO")}<small>${esc(t.name || "")} · ${esc(t.setup || "")}</small></td>
       <td>${dhm(t.opened_at)}<br><small class="mut">→ ${hm(t.closed_at)}</small></td><td>${px(t.entry_raw, "CRYPTO")}</td><td>${px(t.exit_raw, "CRYPTO")}</td>
       <td>${eur(t.notional_eur, 0)}</td><td>${eur(t.costs_eur)}</td><td class="${cls(t.pnl_eur)}">${sg(t.pnl_eur, 2, " €")}<br><small>${sg(t.pnl_pct, 2, " %")}</small></td>
@@ -311,8 +296,8 @@
             <span><i style="background:#5aa9ff"></i>Bitcoin (buy &amp; hold)<b class="${cls(btcPct)}">${btcPct == null ? "—" : sg(btcPct, 2, " %")}</b></span></div>
         </article>
       </section>
-      <article class="panel"><div class="ph"><h2>POSITIONS CRYPTO</h2><span class="hint">${P.length} / ${r.max_open_positions || 2} max · TP1 50 % à 1R, TP2 2,5R ou VWAP 00h00 · flatten 23h50</span></div>
-        ${P.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Entrée</th><th>Dernier</th><th>Stop</th><th>TP1 / TP2</th><th>Montant</th><th>P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      <article class="panel"><div class="ph"><h2>POSITIONS CRYPTO</h2><span class="hint">${P.length} / ${r.max_open_positions || 2} max · TP1 50 % à 1R, TP2 2,5R ou VWAP 00h00 · flatten 23h50 · toucher une carte pour le graphique</span></div>
+        ${P.length ? `<div id="live-cards-crypto" class="live-cards"></div>`
           : empty("Aucune position crypto ouverte", "Le bot n'entre qu'entre 00h30 et 23h20, si le setup technique et le risque sont validés. Tout est fermé à 23h50.")}</article>
       <div class="grid2">
         <article class="panel"><div class="ph"><h2>DERNIERS SETUPS</h2><span class="hint">cycle ${esc(hm((C.scan && C.scan.ts) || C.last_cycle && C.last_cycle.ts))}</span></div>
@@ -325,8 +310,392 @@
           : empty("Aucun trade crypto clos", "Les sorties (TP1, TP2, stop, VWAP, 23h50) apparaîtront ici, avec les frais OKX Europe.")}</article>`;
   }
 
+
+  /* ---------- suivi live des positions + graphique ---------- */
+  const LIVE_RAW = "https://raw.githubusercontent.com/aronsonkyllian-ux/nexus-bourse/live/data/live.json";
+  const LIVE_EVERY_MS = 4000;
+  let liveTimer = null, liveFeed = null, chartSym = null, chartApi = null, candleSeries = null, chartBars = [];
+
+  function allPositions() {
+    const out = [];
+    for (const p of (D && D.positions) || []) out.push(p);
+    for (const p of (D && D.crypto && D.crypto.positions) || []) out.push(Object.assign({}, p, { market: p.market || "CRYPTO" }));
+    return out;
+  }
+  function pairOf(sym) {
+    const m = (D && D.crypto_pairs) || {};
+    return m[sym] || { binance: String(sym).replace("-USD", "USDT"), okx: String(sym).replace("-USD", "-USDT") };
+  }
+  function sellCommission(p, shares, price) {
+    const f = p.fees || (D && D.fees_live && D.fees_live[p.market]) || {};
+    const value = shares * price, m = p.market;
+    if (m === "US") {
+      let c = Math.max(f.min_per_order || 0, shares * (f.commission_per_share || 0));
+      c = Math.min(c, value * (f.max_pct_of_value || 100) / 100);
+      c += c * (f.pass_through_pct_of_commission || 0) / 100;
+      c += shares * (f.third_party_per_share || 0);
+      c += value * (f.sec_fee_rate_on_sales || 0);
+      return c;
+    }
+    if (m === "CRYPTO") return Math.max(f.min_per_order || 0, value * (f.pct_of_value || 0.20) / 100);
+    let c = Math.max(f.min_per_order || 0, value * (f.pct_of_value || 0) / 100);
+    if (f.max_per_order) c = Math.min(c, f.max_per_order);
+    return c + (f.third_party_per_order || 0);
+  }
+  function markLive(p, price, fx) {
+    const shares = Math.abs(p.shares || 0);
+    const fxi = fx || p.fx || (p.market === "EU" ? 1 : ((D && D.capital && D.capital.fx_eurusd) || 1.08));
+    const gross = shares * price / fxi;
+    const val = gross * (1 - (p.cost_side || 0)) - sellCommission(p, shares, price) / fxi;
+    const pnl = val - (p.notional_eur || 0) - (p.entry_cost_eur || 0);
+    const den = (p.notional_eur || 0) + (p.entry_cost_eur || 0);
+    return { price, fx: fxi, val, pnl, pct: den ? pnl / den * 100 : 0 };
+  }
+  function progOf(p, price) {
+    const a = Number(p.stop), b = Number(p.tp2 != null ? p.tp2 : p.target);
+    if (!isFinite(a) || !isFinite(b) || a === b) return 0.5;
+    return Math.max(0, Math.min(1, (price - a) / (b - a)));
+  }
+  function tickPct(p, level) {
+    const a = Number(p.stop), b = Number(p.tp2 != null ? p.tp2 : p.target);
+    if (!isFinite(a) || !isFinite(b) || a === b) return 0.5;
+    return Math.max(0, Math.min(1, (level - a) / (b - a)));
+  }
+  function distPct(price, level) {
+    if (price == null || level == null || !price) return null;
+    return (level - price) / price * 100;
+  }
+  function liveFresh() {
+    if (!liveFeed || !liveFeed.ts) return false;
+    const age = Date.now() - Date.parse(liveFeed.ts);
+    return isFinite(age) && age < 180 * 1000;
+  }
+  function liveLabel(src, delay, market) {
+    if (src === "ticker") return { cls: "live", text: "LIVE" };
+    if (src === "yahoo" || src === "klines") {
+      if (market === "EU" || delay) return { cls: "delayed", text: "LIVE · retard ~" + (delay || 15) + " min" };
+      return { cls: "live", text: "LIVE" };
+    }
+    return { cls: "deferred", text: "DIFFÉRÉ" };
+  }
+  function mergeLive(p) {
+    const q = liveFeed && liveFeed.quotes && liveFeed.quotes[p.symbol];
+    const mkrow = liveFeed && (liveFeed.marks || []).find(x => x.symbol === p.symbol);
+    const fx = (q && q.fx) || (mkrow && mkrow.fx) || p.fx || (D && D.capital && D.capital.fx_eurusd);
+    let price, src = "snapshot", delay = p.market === "EU" ? 15 : 0;
+    if (p._tick != null) { price = p._tick; src = "ticker"; delay = 0; }
+    else if (q && q.price != null && liveFresh()) { price = q.price; src = q.src || "yahoo"; delay = q.delay_min; }
+    else if (mkrow && mkrow.price != null && liveFresh()) { price = mkrow.price; src = mkrow.src; delay = mkrow.delay_min; }
+    else { price = p.last; src = "snapshot"; }
+    let m;
+    if (p.entry_cost_eur != null && p.shares) m = markLive(p, price, fx);
+    else if (mkrow && liveFresh() && p._tick == null) m = { price, pnl: mkrow.pnl_eur, pct: mkrow.pnl_pct, val: mkrow.value_eur, fx };
+    else m = { price, pnl: p.pnl_eur, pct: p.pnl_pct, val: null, fx };
+    m.src = src; m.delay_min = delay;
+    return m;
+  }
+  function cardHtml(p, m) {
+    const price = m.price, lab = liveLabel(m.src, m.delay_min, p.market);
+    const dStop = distPct(price, p.stop), d1 = distPct(price, p.tp1), d2 = distPct(price, p.tp2 != null ? p.tp2 : p.target);
+    const pr = progOf(p, price) * 100, t1 = p.tp1 != null ? tickPct(p, p.tp1) * 100 : null;
+    const book = p.market === "CRYPTO" ? "crypto" : "stocks";
+    return `<button type="button" class="live-card" data-sym="${esc(p.symbol)}" data-book="${book}">
+      <div class="live-card-h"><span class="sym">${esc(p.symbol)}${mk(p.market)}</span>
+        <span class="live-flag ${lab.cls}">${esc(lab.text)}</span></div>
+      <div class="live-name">${esc(p.name || "")} · ${esc(p.setup || "")} · ${hm(p.opened_at)}${p.exit_status ? " · " + esc(p.exit_status) : ""}</div>
+      <div class="live-row">
+        <div class="live-px">${px(price, p.market)}</div>
+        <div class="live-pnl ${cls(m.pnl)}">${sg(m.pnl, 2, " €")}<small>${sg(m.pct, 2, " %")}</small></div>
+      </div>
+      <div class="live-lvls">
+        <span>SL <b>${px(p.stop, p.market)}</b> <small>${sg(dStop, 2, " %")}</small></span>
+        ${p.use_partial && p.tp1 != null ? `<span>TP1 <b>${px(p.tp1, p.market)}</b> <small>${sg(d1, 2, " %")}</small></span>` : ""}
+        <span>TP2 <b>${px(p.tp2 != null ? p.tp2 : p.target, p.market)}</b> <small>${sg(d2, 2, " %")}</small></span>
+      </div>
+      <div class="live-prog" aria-hidden="true"><i class="fill" style="width:${pr}%"></i>
+        ${t1 != null ? `<b class="tick" style="left:${t1}%"></b>` : ""}
+        <em class="knob" style="left:${pr}%"></em></div>
+      <div class="live-hint">Toucher pour le graphique · 5 min</div>
+    </button>`;
+  }
+  function bindCards(root) {
+    if (!root) return;
+    root.querySelectorAll(".live-card").forEach(el => el.addEventListener("click", () => openPosChart(el.dataset.sym)));
+  }
+  function paintLive() {
+    const list = allPositions();
+    const blot = $("#live-blotter");
+    if (blot) {
+      if (!list.length) { blot.hidden = true; blot.innerHTML = ""; }
+      else {
+        blot.hidden = false;
+        blot.innerHTML = `<div class="live-blotter-h"><span>POSITIONS EN DIRECT</span><span class="mut">${list.length} ouverte${list.length > 1 ? "s" : ""} · toucher pour le graphique</span></div><div class="live-cards">${list.map(p => cardHtml(p, mergeLive(p))).join("")}</div>`;
+        bindCards(blot);
+      }
+    }
+    const port = $("#live-cards-port");
+    if (port) { const stocks = list.filter(p => p.market !== "CRYPTO"); port.innerHTML = stocks.map(p => cardHtml(p, mergeLive(p))).join(""); bindCards(port); }
+    const cry = $("#live-cards-crypto");
+    if (cry) { const cs = list.filter(p => p.market === "CRYPTO"); cry.innerHTML = cs.map(p => cardHtml(p, mergeLive(p))).join(""); bindCards(cry); }
+    if (chartSym) refreshOpenChart();
+  }
+  async function fetchTickers(list) {
+    const cryptos = list.filter(p => p.market === "CRYPTO");
+    await Promise.all(cryptos.map(async p => {
+      const pair = pairOf(p.symbol);
+      try {
+        const r = await fetch("https://www.okx.com/api/v5/market/ticker?instId=" + encodeURIComponent(pair.okx), { cache: "no-store" });
+        if (r.ok) {
+          const j = await r.json();
+          const last = j && j.data && j.data[0] && parseFloat(j.data[0].last);
+          if (last > 0) { p._tick = last; return; }
+        }
+      } catch (e) {}
+      try {
+        const r = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=" + encodeURIComponent(pair.binance), { cache: "no-store" });
+        if (r.ok) {
+          const j = await r.json();
+          const last = parseFloat(j.price);
+          if (last > 0) p._tick = last;
+        }
+      } catch (e) {}
+    }));
+  }
+  async function fetchLiveJson() {
+    const url = ((D && D.live && D.live.url) || LIVE_RAW) + "?t=" + Date.now();
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    liveFeed = await r.json();
+  }
+  async function tickLive() {
+    if (document.hidden || !D) return;
+    const list = allPositions();
+    if (!list.length) { stopLiveTimer(); paintLive(); return; }
+    const tasks = [];
+    if (list.some(p => p.market === "CRYPTO")) tasks.push(fetchTickers(list));
+    if (list.some(p => p.market !== "CRYPTO") || chartSym) tasks.push(fetchLiveJson().catch(() => {}));
+    await Promise.all(tasks);
+    paintLive();
+  }
+  function startLiveTimer() {
+    if (liveTimer) return;
+    tickLive();
+    liveTimer = setInterval(tickLive, LIVE_EVERY_MS);
+  }
+  function stopLiveTimer() { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } }
+  function syncLiveTimer() {
+    if (!document.hidden && allPositions().length) startLiveTimer();
+    else if (!chartSym) stopLiveTimer();
+  }
+
+  function parisMidnightMs(now) {
+    now = now || new Date();
+    const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+    const p = Object.fromEntries(fmt.formatToParts(now).filter(x => x.type !== "literal").map(x => [x.type, x.value]));
+    const elapsed = ((+p.hour) * 3600 + (+p.minute) * 60 + (+p.second)) * 1000 + now.getMilliseconds();
+    return now.getTime() - elapsed;
+  }
+  async function loadCryptoBars(p) {
+    const pair = pairOf(p.symbol);
+    const start = parisMidnightMs();
+    try {
+      const r = await fetch("https://api.binance.com/api/v3/klines?symbol=" + encodeURIComponent(pair.binance) + "&interval=5m&startTime=" + start + "&limit=500", { cache: "no-store" });
+      if (r.ok) {
+        const raw = await r.json();
+        if (Array.isArray(raw) && raw.length) {
+          return raw.map(k => ({ time: Math.floor(k[0] / 1000), open: +k[1], high: +k[2], low: +k[3], close: +k[4] }));
+        }
+      }
+    } catch (e) {}
+    try {
+      const r = await fetch("https://www.okx.com/api/v5/market/candles?instId=" + encodeURIComponent(pair.okx) + "&bar=5m&limit=300", { cache: "no-store" });
+      if (r.ok) {
+        const j = await r.json();
+        const raw = (j && j.data) || [];
+        return raw.map(k => ({ time: Math.floor((+k[0]) / 1000), open: +k[1], high: +k[2], low: +k[3], close: +k[4] }))
+          .filter(b => b.time * 1000 >= start).sort((a, b) => a.time - b.time);
+      }
+    } catch (e) {}
+    const ch = liveFeed && liveFeed.charts && liveFeed.charts[p.symbol];
+    return (ch && ch.bars || []).map(b => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c }));
+  }
+  function loadStockBars(p) {
+    const ch = liveFeed && liveFeed.charts && liveFeed.charts[p.symbol];
+    return (ch && ch.bars || []).map(b => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c }));
+  }
+  function vwapFromBars(bars) {
+    const ch = liveFeed && liveFeed.charts && chartSym && liveFeed.charts[chartSym];
+    if (ch && ch.vwap) return ch.vwap;
+    let num = 0, den = 0;
+    for (const b of bars || []) {
+      const typ = (b.high + b.low + b.close) / 3, v = b.volume || 1;
+      num += typ * v; den += v;
+    }
+    return den ? num / den : null;
+  }
+  function applyLiveToLastBar(bars, price) {
+    if (!bars || !bars.length || price == null) return bars;
+    const last = Object.assign({}, bars[bars.length - 1]);
+    last.close = price;
+    last.high = Math.max(last.high, price);
+    last.low = Math.min(last.low, price);
+    return bars.slice(0, -1).concat([last]);
+  }
+  function priceLines(series, p) {
+    const lines = [
+      { price: p.entry, color: "#ffb000", title: "ENTRÉE", lineWidth: 2, lineStyle: 0 },
+      { price: p.stop, color: "#ff4d5e", title: "SL", lineWidth: 2, lineStyle: 0 },
+    ];
+    if (p.use_partial && p.tp1 != null) lines.push({ price: p.tp1, color: "#21d07a", title: "TP1", lineWidth: 1, lineStyle: 2 });
+    const tp2 = p.tp2 != null ? p.tp2 : p.target;
+    if (tp2 != null) lines.push({ price: tp2, color: "#21d07a", title: "TP2", lineWidth: 2, lineStyle: 0 });
+    const vwap = vwapFromBars(chartBars);
+    if (vwap) lines.push({ price: vwap, color: "#5aa9ff", title: "VWAP", lineWidth: 1, lineStyle: 2 });
+    lines.forEach(l => { if (l.price != null) series.createPriceLine(l); });
+  }
+  function entryMarker(p, bars) {
+    if (!p.opened_at || !bars || !bars.length) return [];
+    let t = Math.floor(Date.parse(p.opened_at) / 1000);
+    if (!isFinite(t)) return [];
+    t = t - (t % 300);
+    const first = bars[0].time, last = bars[bars.length - 1].time;
+    if (t < first) t = first;
+    if (t > last) t = last;
+    const exact = bars.reduce((best, b) => Math.abs(b.time - t) < Math.abs(best - t) ? b.time : best, bars[0].time);
+    return [{ time: exact, position: "belowBar", color: "#ffb000", shape: "arrowUp", text: "Achat" }];
+  }
+  function destroyChart() {
+    if (chartApi) { try { chartApi.remove(); } catch (e) {} }
+    chartApi = candleSeries = null;
+    const el = $("#pos-chart-canvas");
+    if (el) el.innerHTML = "";
+  }
+  function drawCanvasFallback(el, bars, p) {
+    const wrap = el.getBoundingClientRect();
+    const W = Math.max(320, Math.floor(wrap.width) || 360), H = Math.max(240, Math.floor(wrap.height) || 280);
+    el.innerHTML = `<canvas width="${W}" height="${H}" style="width:100%;height:100%"></canvas>`;
+    const c = el.querySelector("canvas").getContext("2d");
+    c.fillStyle = "#0b0c10"; c.fillRect(0, 0, W, H);
+    if (!bars.length) { c.fillStyle = "#8a909e"; c.font = "13px sans-serif"; c.fillText("Pas de barres 5 min pour le moment.", 16, 40); return; }
+    const padL = 8, padR = 58, padT = 16, padB = 24;
+    let lo = Math.min(...bars.map(b => b.low)), hi = Math.max(...bars.map(b => b.high));
+    [p.entry, p.stop, p.tp1, p.tp2 || p.target, vwapFromBars(bars)].forEach(v => { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+    const span = (hi - lo) || 1; lo -= span * 0.04; hi += span * 0.04;
+    const X = i => padL + i / Math.max(1, bars.length - 1) * (W - padL - padR);
+    const Y = v => padT + (hi - v) / (hi - lo) * (H - padT - padB);
+    const levels = [["#ffb000", p.entry, "ENTRÉE"], ["#ff4d5e", p.stop, "SL"], ["#21d07a", p.tp1, "TP1"], ["#21d07a", p.tp2 != null ? p.tp2 : p.target, "TP2"], ["#5aa9ff", vwapFromBars(bars), "VWAP"]];
+    levels.forEach(([col, v, lab]) => {
+      if (v == null) return;
+      c.strokeStyle = col; c.globalAlpha = 0.9; c.setLineDash(lab === "VWAP" || lab === "TP1" ? [5, 4] : []);
+      c.beginPath(); c.moveTo(padL, Y(v)); c.lineTo(W - padR, Y(v)); c.stroke(); c.setLineDash([]);
+      c.globalAlpha = 1; c.fillStyle = col; c.font = "10px monospace"; c.fillText(lab, W - padR + 4, Y(v) + 3);
+    });
+    const w = Math.max(2, (W - padL - padR) / bars.length * 0.7);
+    bars.forEach((b, i) => {
+      const x = X(i), up = b.close >= b.open;
+      c.strokeStyle = c.fillStyle = up ? "#21d07a" : "#ff4d5e";
+      c.beginPath(); c.moveTo(x, Y(b.high)); c.lineTo(x, Y(b.low)); c.stroke();
+      const y1 = Y(Math.max(b.open, b.close)), y2 = Y(Math.min(b.open, b.close));
+      c.fillRect(x - w / 2, y1, w, Math.max(1, y2 - y1));
+    });
+  }
+  function renderChartLib(el, bars, p) {
+    destroyChart();
+    const LW = window.LightweightCharts;
+    if (!LW || !bars.length) { drawCanvasFallback(el, bars, p); return; }
+    chartApi = LW.createChart(el, {
+      layout: { background: { color: "#0b0c10" }, textColor: "#8a909e", fontFamily: "IBM Plex Mono, ui-monospace, monospace" },
+      grid: { vertLines: { color: "#161a23" }, horzLines: { color: "#161a23" } },
+      rightPriceScale: { borderColor: "#2a3140" },
+      timeScale: { borderColor: "#2a3140", timeVisible: true, secondsVisible: false },
+      crosshair: { vertLine: { color: "#ffb000", width: 1, style: 2, labelBackgroundColor: "#ffb000" },
+                   horzLine: { color: "#ffb000", width: 1, style: 2, labelBackgroundColor: "#ffb000" } },
+      localization: { locale: "fr-FR",
+        timeFormatter: t => new Date(t * 1000).toLocaleTimeString("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }) },
+      handleScroll: { vertTouchDrag: false },
+      width: el.clientWidth, height: el.clientHeight,
+    });
+    const rng = (function(){
+      const vals = [];
+      bars.forEach(b => { vals.push(b.high, b.low); });
+      [p.entry, p.stop, p.tp1, p.tp2, p.target].forEach(v => { if (v != null && isFinite(+v)) vals.push(+v); });
+      const vw = vwapFromBars(bars); if (vw != null) vals.push(vw);
+      const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+      const pad = (hi - lo) * 0.06 || Math.abs(lo) * 0.002;
+      return { minValue: lo - pad, maxValue: hi + pad };
+    })();
+    candleSeries = chartApi.addCandlestickSeries({
+      upColor: "#21d07a", downColor: "#ff4d5e", borderUpColor: "#21d07a", borderDownColor: "#ff4d5e",
+      wickUpColor: "#21d07a", wickDownColor: "#ff4d5e",
+      autoscaleInfoProvider: () => ({ priceRange: rng }),
+    });
+    candleSeries.setData(bars);
+    priceLines(candleSeries, p);
+    const mk = entryMarker(p, bars);
+    if (mk.length) candleSeries.setMarkers(mk);
+    chartApi.timeScale().fitContent();
+    requestAnimationFrame(() => { if (chartApi) { chartApi.applyOptions({ width: el.clientWidth, height: el.clientHeight }); chartApi.timeScale().fitContent(); } });
+  }
+  async function openPosChart(sym) {
+    const p = allPositions().find(x => x.symbol === sym);
+    if (!p) return;
+    chartSym = sym;
+    const box = $("#pos-chart");
+    box.hidden = false;
+    document.body.classList.add("chart-open");
+    $("#pos-chart-title").textContent = p.symbol + (p.name ? " · " + p.name : "");
+    const m = mergeLive(p);
+    const lab = liveLabel(m.src, m.delay_min, p.market);
+    $("#pos-chart-sub").textContent = "bougies 5 minutes · " + lab.text + (p.setup ? " · " + p.setup : "");
+    $("#pos-chart-px").innerHTML = `${px(m.price, p.market)} <small class="${cls(m.pnl)}">${sg(m.pnl, 2, " €")} · ${sg(m.pct, 2, " %")}</small>`;
+    $("#pos-chart-legend").innerHTML = `<span><i class="entry"></i>Entrée ${px(p.entry, p.market)}</span><span><i class="sl"></i>Stop ${px(p.stop, p.market)}</span>${p.tp1 != null ? `<span><i class="tp"></i>TP1 ${px(p.tp1, p.market)}</span>` : ""}<span><i class="tp"></i>TP2 ${px(p.tp2 != null ? p.tp2 : p.target, p.market)}</span><span><i class="vwap"></i>VWAP</span>`;
+    const el = $("#pos-chart-canvas");
+    el.innerHTML = `<div class="empty" style="padding:24px">Chargement du graphique…</div>`;
+    if (p.market !== "CRYPTO") { try { await fetchLiveJson(); } catch (e) {} }
+    chartBars = p.market === "CRYPTO" ? await loadCryptoBars(p) : loadStockBars(p);
+    chartBars = applyLiveToLastBar(chartBars, m.price);
+    renderChartLib(el, chartBars, p);
+    startLiveTimer();
+  }
+  function refreshOpenChart() {
+    const p = allPositions().find(x => x.symbol === chartSym);
+    if (!p) { closePosChart(); return; }
+    const m = mergeLive(p);
+    const lab = liveLabel(m.src, m.delay_min, p.market);
+    $("#pos-chart-sub").textContent = "bougies 5 minutes · " + lab.text + (p.setup ? " · " + p.setup : "");
+    $("#pos-chart-px").innerHTML = `${px(m.price, p.market)} <small class="${cls(m.pnl)}">${sg(m.pnl, 2, " €")} · ${sg(m.pct, 2, " %")}</small>`;
+    if (!chartBars.length) return;
+    chartBars = applyLiveToLastBar(chartBars, m.price);
+    if (candleSeries) {
+      const last = chartBars[chartBars.length - 1];
+      try { candleSeries.update(last); } catch (e) {}
+    } else {
+      drawCanvasFallback($("#pos-chart-canvas"), chartBars, p);
+    }
+  }
+  function closePosChart() {
+    destroyChart();
+    chartSym = null; chartBars = [];
+    const box = $("#pos-chart");
+    if (box) box.hidden = true;
+    document.body.classList.remove("chart-open");
+    syncLiveTimer();
+  }
+  const _closeBtn = $("#pos-chart-close");
+  if (_closeBtn) _closeBtn.addEventListener("click", closePosChart);
+  const _overlay = $("#pos-chart");
+  if (_overlay) _overlay.addEventListener("click", e => { if (e.target === _overlay) closePosChart(); });
+  addEventListener("keydown", e => { if (e.key === "Escape" && chartSym) closePosChart(); });
+  addEventListener("resize", () => {
+    if (chartApi && chartSym) {
+      const el = $("#pos-chart-canvas");
+      if (el) chartApi.applyOptions({ width: el.clientWidth, height: el.clientHeight });
+    }
+  });
+
   function render() {
     renderTape(); renderStatus(); renderCapital(); renderChart(); renderPortfolio(); renderSignals(); renderJournal(); renderMarket(); renderTeam(); renderCrypto();
+    paintLive(); syncLiveTimer();
   }
 
   async function load() {
@@ -339,7 +708,10 @@
     }
   }
   load(); setInterval(load, 60000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) { load(); tickLive(); }
+    else stopLiveTimer();
+  });
   let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => D && renderChart(), 150); });
   if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 })();
