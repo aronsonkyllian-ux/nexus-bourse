@@ -290,7 +290,7 @@
     box.innerHTML = `
       <section class="hero" style="margin-bottom:16px">
         <article class="panel capital">
-          <div class="cap-l">CAPITAL CRYPTO · PAPIER SÉPARÉ</div>
+          <div class="cap-l">CAPITAL CRYPTO · PAPIER SÉPARÉ · ${esc(C.broker || r.broker || "Binance (simulation papier)")}</div>
           <div class="cap-v num">${nf(C.equity)}<small>€</small></div>
           <div class="cap-pl ${cls(C.pnl_total)}">${sg(C.pnl_total, 2, " €")} · ${sg(C.pnl_total_pct, 2, " %")}</div>
           <div class="cap-base">départ ${eur(start, 0)} · lancé le ${esc(dhm(C.created_at))} · séance ${esc(ses.open || "00:30")}–${esc(ses.close || "23:50")} · ${esc((ST[ses.state] || ses.state || "—"))}</div>
@@ -302,7 +302,7 @@
             <div class="kpi"><span>Réussite</span><b>${s.win_rate == null ? "—" : nf(s.win_rate, 0) + " %"}</b></div>
             <div class="kpi"><span>Bitcoin</span><b class="${cls(C.bench && C.bench.since_start_pct)}">${C.bench && C.bench.since_start_pct != null ? sg(C.bench.since_start_pct, 2, " %") : "—"}</b></div>
           </div>
-          <div class="note">Carnet fictif distinct des actions (1 000 €). ${(C.universe && C.universe.length) ? (C.universe.length + " cryptos suivies : " + C.universe.map(u => u.name || u.symbol).join(", ")) : "Liste de cryptos liquides"} · day trading 7j/7, clôture forcée à 23h50 heure de Paris. Achat uniquement.</div>
+          <div class="note">Carnet fictif distinct des actions (1 000 €), modèle ${esc(C.broker || r.broker || "Binance (simulation papier)")}. ${(C.universe && C.universe.length) ? (C.universe.length + " cryptos suivies : " + C.universe.map(u => u.name || u.symbol).join(", ")) : "Liste de cryptos liquides"} · day trading 7j/7, clôture forcée à 23h50 heure de Paris. Achat uniquement.</div>
         </article>
         <article class="panel curve">
           <div class="ph"><h2>COURBE CRYPTO</h2><span class="hint">vs Bitcoin buy &amp; hold · % depuis le lancement</span></div>
@@ -317,12 +317,12 @@
       <div class="grid2">
         <article class="panel"><div class="ph"><h2>DERNIERS SETUPS</h2><span class="hint">cycle ${esc(hm((C.scan && C.scan.ts) || C.last_cycle && C.last_cycle.ts))}</span></div>
           ${decCards || (scanRows ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Cours</th><th>Tech</th><th>Setup</th></tr></thead><tbody>${scanRows}</tbody></table></div>` : empty("Pas encore de setup", "Les cycles tournent toutes les 5 minutes pendant la séance crypto."))}</article>
-        <article class="panel"><div class="ph"><h2>RÈGLES CRYPTO</h2><span class="hint">même philosophie que les actions, carnet à part</span></div>
+        <article class="panel"><div class="ph"><h2>RÈGLES CRYPTO</h2><span class="hint">${esc(C.broker || r.broker || "Binance (simulation papier)")} · carnet à part des actions IBKR</span></div>
           <div class="rules">${[r.exits, r.fees_desc, `Risque ${r.risk_per_trade_pct || 1.5} % par trade · plafond ${r.max_position_pct || 35} % · max ${r.max_open_positions || 2} positions · stop journalier −${r.daily_loss_limit_pct || 3} % · pas d'entrée après ${r.no_entry_after || "23:20"} ni avant ${r.open || "00:30"}.`].filter(Boolean).map(x => `<p>${esc(x)}</p>`).join("")}</div></article>
       </div>
       <article class="panel"><div class="ph"><h2>JOURNAL CRYPTO</h2><span class="hint">${T.length} trade(s) clos</span></div>
         ${T.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Ouvert / clos</th><th>Entrée</th><th>Sortie</th><th>Montant</th><th>Frais</th><th>P&amp;L net</th><th style="text-align:left">Sortie</th></tr></thead><tbody>${trows}</tbody></table></div>`
-          : empty("Aucun trade crypto clos", "Les sorties (TP1, TP2, stop, VWAP, 23h50) apparaîtront ici, avec les frais IBKR.")}</article>`;
+          : empty("Aucun trade crypto clos", "Les sorties (TP1, TP2, stop, VWAP, 23h50) apparaîtront ici, avec les frais Binance.")}</article>`;
   }
 
   function render() {
