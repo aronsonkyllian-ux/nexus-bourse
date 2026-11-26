@@ -1,7 +1,7 @@
 {
   "name": "Équipe Nexus",
   "short_name": "Nexus",
-  "description": "Terminal de day trading fictif (paper trading) — actions US et européennes.",
+  "description": "Terminal de day trading fictif (paper trading) — actions US et européennes, et crypto BTC/ETH.",
   "id": "./",
   "start_url": "./?source=pwa",
   "scope": "./",

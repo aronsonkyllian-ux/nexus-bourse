@@ -11,7 +11,7 @@
   const hm = iso => iso ? new Date(iso).toLocaleTimeString("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }) : "—";
   const dhm = iso => iso ? new Date(iso).toLocaleString("fr-FR", { timeZone: TZ, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(" ", " · ") : "—";
   const day = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }) : "—";
-  const px = (v, m) => v == null ? "—" : nf(v, v >= 1000 ? 1 : 2) + (m === "US" ? " $" : " €");
+  const px = (v, m) => v == null ? "—" : nf(v, v >= 1000 ? 1 : 2) + (m === "EU" ? " €" : " $");
   const mk = m => `<span class="mk ${esc(m)}">${esc(m)}</span>`;
   const LEG = {tp1:"TP1 (50 %)", tp2:"TP2", stop:"stop", vwap:"VWAP", session:"fin de séance", full:"sortie unique"};
   const exitLab = t => (t.leg && LEG[t.leg] ? LEG[t.leg] + " · " : "") + (t.exit_reason || "");
@@ -24,9 +24,9 @@
     if (history.replaceState) history.replaceState(null, "", "#" + tab);
   }
   document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => { show(b.dataset.tab); if (innerWidth < 1024) scrollTo({ top: $(".tab.on").offsetTop - 40, behavior: "smooth" }); }));
-  const keys = { F1: "port", F2: "sig", F3: "jrnl", F4: "mkt", F5: "team" };
+  const keys = { F1: "port", F2: "sig", F3: "jrnl", F4: "mkt", F5: "team", F6: "crypto" };
   addEventListener("keydown", e => { if (keys[e.key]) { e.preventDefault(); show(keys[e.key]); } });
-  const h0 = location.hash.slice(1); if (["port", "sig", "jrnl", "mkt", "team"].includes(h0)) show(h0);
+  const h0 = location.hash.slice(1); if (["port", "sig", "jrnl", "mkt", "team", "crypto"].includes(h0)) show(h0);
 
   /* ---------- horloge ---------- */
   function clock() {
@@ -38,16 +38,16 @@
   /* ---------- rendu ---------- */
   function renderTape() {
     const items = D.tape.filter(t => t.p != null).map(t =>
-      `<span class="tk ${t.m === "EU" ? "eu" : ""}"><b>${esc(t.s.replace(/\.(PA|DE|AS|MI|MC|BR|SW|L)$/, ""))}</b><span class="px">${nf(t.p, t.p >= 1000 ? 1 : 2)}</span><span class="${cls(t.c)}">${t.c == null ? "" : (t.c >= 0 ? "▲ " : "▼ ") + sg(t.c, 2, " %")}</span></span>`).join("");
+      `<span class="tk ${t.m === "EU" ? "eu" : t.m === "CRYPTO" ? "crypto" : ""}"><b>${esc(t.s.replace(/\.(PA|DE|AS|MI|MC|BR|SW|L)$/, ""))}</b><span class="px">${nf(t.p, t.p >= 1000 ? 1 : 2)}</span><span class="${cls(t.c)}">${t.c == null ? "" : (t.c >= 0 ? "▲ " : "▼ ") + sg(t.c, 2, " %")}</span></span>`).join("");
     $("#tape").innerHTML = items + items;
   }
 
   function renderStatus() {
     const e = D.engine, p = $("#status"), gen = new Date(D.generated_at), age = (Date.now() - gen) / 60000;
-    const open = Object.values(D.sessions).some(s => s.state === "open");
+    const open = Object.values(D.sessions || {}).some(s => s.state === "open");
     let c = "off", t = "moteur arrêté";
     if (e.running && e.state === "actif") { c = "live"; t = "moteur actif"; }
-    else if (e.running) { c = "idle"; t = "en veille · hors séance"; }
+    else if (e.running) { c = "idle"; t = open ? "moteur actif" : "en veille · hors séance"; }
     p.className = "pill " + c; p.querySelector("b").textContent = `${t} · màj ${hm(D.generated_at)}`;
     const st = $("#stale");
     if (open && age > 35) { st.hidden = false; st.textContent = `Données en retard : dernière mise à jour il y a ${Math.round(age)} min (${dhm(D.generated_at)}, heure de Paris).`; }
@@ -185,8 +185,8 @@
   const ST = { open: "OUVERTE", pre: "AVANT OUVERTURE", post: "CLÔTURÉE", closed: "FERMÉE" };
   function renderMarket() {
     const S = D.sessions, X = (D.mood.x || {}).market || {}, N = D.mood.news || {};
-    const ses = ["EU", "US"].map(m => { const s = S[m] || {}; return `<div class="ses"><div class="st ${esc(s.state)}">● ${ST[s.state] || "—"}</div>
-      <div class="hr">${m === "EU" ? "Europe" : "États-Unis"}</div>
+    const ses = ["EU", "US", "CRYPTO"].map(m => { const s = S[m] || {}; const lab = m === "EU" ? "Europe" : m === "US" ? "États-Unis" : "Crypto (7j/7)"; return `<div class="ses"><div class="st ${esc(s.state)}">● ${ST[s.state] || "—"}</div>
+      <div class="hr">${lab}</div>
       <div class="meta">${s.open ? `séance ${esc(s.open)} – ${esc(s.close)}` : "pas de séance aujourd'hui"}${s.state !== "open" && s.next_open ? `<br>prochaine ouverture : ${esc(dhm(s.next_open))}` : ""}</div></div>`; }).join("");
     const idx = (D.indices || []).map(i => `<div class="ix"><span>${esc(i.n)}</span><b>${i.p == null ? "—" : nf(i.p, 2)}</b><em class="${cls(i.c)}" style="font:600 12px var(--mono);font-style:normal">${sg(i.c, 2, " %")}</em></div>`).join("");
     const g = (v, lo = -1, hi = 1) => `<div class="gauge"><i style="left:${Math.max(2, Math.min(98, (v - lo) / (hi - lo) * 100))}%"></i></div>`;
@@ -233,8 +233,100 @@
         <div class="note">${(D.sizing_reco || []).map(esc).join("<br>")}</div></article>`;
   }
 
+
+  function renderCrypto() {
+    const C = D.crypto || {};
+    const box = $("#tab-crypto");
+    if (!box) return;
+    if (!C.enabled && C.enabled !== undefined && !C.start) {
+      box.innerHTML = `<article class="panel">${empty("Portefeuille crypto inactif", "Le carnet papier BTC/ETH n'est pas encore initialisé.")}</article>`;
+      return;
+    }
+    const r = C.rules || {}, P = C.positions || [], T = C.trades || [], s = C.stats || {}, ses = C.session || {};
+    const tgt = p => {
+      if (p.use_partial && (p.tp1 != null || p.tp2 != null))
+        return `${px(p.tp1, "CRYPTO")} / ${px(p.tp2, "CRYPTO")}<br><small>${p.tp1_done ? "TP1 fait · vers TP2" : "TP1 en attente"}</small>`;
+      return px(p.target, "CRYPTO");
+    };
+    const rows = P.map(p => `<tr><td class="sym">${esc(p.symbol)}${mk("CRYPTO")}<small>${esc(p.name)} · ${esc(p.setup || "")} · ${hm(p.opened_at)}${p.exit_status ? " · " + esc(p.exit_status) : ""}</small></td>
+      <td>${px(p.entry, "CRYPTO")}</td><td>${px(p.last, "CRYPTO")}</td><td class="dn">${px(p.stop, "CRYPTO")}</td><td class="up">${tgt(p)}</td>
+      <td>${eur(p.notional_eur, 0)}</td><td class="${cls(p.pnl_eur)}">${sg(p.pnl_eur, 2, " €")}<br><small>${sg(p.pnl_pct, 2, " %")}</small></td></tr>`).join("");
+    const trows = T.slice().reverse().map(t => `<tr><td class="sym">${esc(t.symbol)}${mk("CRYPTO")}<small>${esc(t.name || "")} · ${esc(t.setup || "")}</small></td>
+      <td>${dhm(t.opened_at)}<br><small class="mut">→ ${hm(t.closed_at)}</small></td><td>${px(t.entry_raw, "CRYPTO")}</td><td>${px(t.exit_raw, "CRYPTO")}</td>
+      <td>${eur(t.notional_eur, 0)}</td><td>${eur(t.costs_eur)}</td><td class="${cls(t.pnl_eur)}">${sg(t.pnl_eur, 2, " €")}<br><small>${sg(t.pnl_pct, 2, " %")}</small></td>
+      <td style="text-align:left;color:var(--mut)">${esc(exitLab(t))}</td></tr>`).join("");
+    const start = C.start || 1000;
+    const curvePts = (C.curve || []).map(([ts, v]) => [Date.parse(ts), (v / start - 1) * 100]);
+    const btcPct = (C.bench && C.bench.since_start_pct != null) ? C.bench.since_start_pct : null;
+    const chartHtml = (function () {
+      const W = 640, H = 200, L = 8, R = 52, T = 10, B = 22;
+      if (curvePts.length < 2) return `<div class="empty">La courbe apparaîtra après les premiers cycles crypto.</div>`;
+      const btcPts = btcPct == null ? [] : curvePts.map((p, i) => [p[0], i === curvePts.length - 1 ? btcPct : null]).filter(p => p[1] != null);
+      // simple last-point overlay only if we don't have a full BTC series; still draw portfolio path
+      let x0 = Math.min(...curvePts.map(p => p[0])), x1 = Math.max(...curvePts.map(p => p[0]));
+      let ys = curvePts.map(p => p[1]); if (btcPct != null) ys.push(btcPct);
+      let y0 = Math.min(0, ...ys), y1 = Math.max(0, ...ys);
+      const pad = Math.max(0.15, (y1 - y0) * 0.12); y0 -= pad; y1 += pad; if (x1 === x0) x1 = x0 + 1;
+      const X = t => L + (t - x0) / (x1 - x0) * (W - L - R), Y = v => T + (y1 - v) / (y1 - y0) * (H - T - B);
+      const path = pts => pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("");
+      let g = "";
+      for (let i = 0; i <= 4; i++) { const v = y0 + (y1 - y0) * i / 4; g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${W - R + 6}" y="${Y(v) + 3}">${sg(v, 2, "%")}</text>`; }
+      const area = curvePts.length > 1 ? path(curvePts) + `L${X(curvePts[curvePts.length - 1][0])},${Y(0)}L${X(curvePts[0][0])},${Y(0)}Z` : "";
+      const btcLine = btcPct == null ? "" : `<line x1="${L}" x2="${W - R}" y1="${Y(btcPct)}" y2="${Y(btcPct)}" stroke="#5aa9ff" stroke-dasharray="4 3" stroke-width="1.5"/><text x="${L + 4}" y="${Y(btcPct) - 4}" fill="#5aa9ff" style="font:500 10px var(--mono)">BTC ${sg(btcPct, 2, " %")}</text>`;
+      return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><g class="grid">${g}</g><line x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}" stroke="#3a3f4b"/>
+        <path d="${area}" fill="url(#ga)"/>${btcLine}<path d="${path(curvePts)}" fill="none" stroke="#ffb000" stroke-width="2.4" stroke-linejoin="round"/>
+        ${curvePts.length ? `<circle cx="${X(curvePts[curvePts.length - 1][0])}" cy="${Y(curvePts[curvePts.length - 1][1])}" r="4" fill="#ffb000"/>` : ""}</svg>`;
+    })();
+    const last = curvePts.length ? curvePts[curvePts.length - 1][1] : null;
+    const scan = (C.scan && C.scan.top) || [];
+    const scanRows = scan.map(r => `<tr><td class="sym">${esc(r.symbol)}<small>${esc(r.name || "")}</small></td><td>${px(r.price, "CRYPTO")}</td><td>${nf(r.tech, 0)}</td><td>${esc(r.setup || "—")}</td></tr>`).join("");
+    const dec = (C.scan && C.scan.decisions) || [];
+    const decCards = dec.map(d => `<div class="sig"><div class="sig-h"><div><span class="sym">${esc(d.symbol)}</span>${mk("CRYPTO")} <span class="meta">${esc(d.setup || "")}</span></div>
+      <span class="verdict ${esc(d.decision)}">${d.decision === "ACHAT" ? "ACHAT" : "VETO RISQUE"}</span></div>
+      <div class="scores">${sc("Technique", (d.tech && d.tech.score) != null ? d.tech.score : d.composite, 1)}</div>
+      <ul class="reasons ${d.decision === "ACHAT" ? "ok" : ""}">${(d.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      ${d.entry ? `<div class="meta" style="margin-top:6px">Plan : entrée ${px(d.entry, "CRYPTO")} · stop ${px(d.stop, "CRYPTO")} · ${d.tp1 != null ? `TP1 ${px(d.tp1, "CRYPTO")} (50 %) · TP2 ${px(d.tp2, "CRYPTO")}` : `objectif ${px(d.target, "CRYPTO")}`}</div>` : ""}
+    </div>`).join("");
+    box.innerHTML = `
+      <section class="hero" style="margin-bottom:16px">
+        <article class="panel capital">
+          <div class="cap-l">CAPITAL CRYPTO · PAPIER SÉPARÉ</div>
+          <div class="cap-v num">${nf(C.equity)}<small>€</small></div>
+          <div class="cap-pl ${cls(C.pnl_total)}">${sg(C.pnl_total, 2, " €")} · ${sg(C.pnl_total_pct, 2, " %")}</div>
+          <div class="cap-base">départ ${eur(start, 0)} · lancé le ${esc(dhm(C.created_at))} · séance ${esc(ses.open || "00:30")}–${esc(ses.close || "23:50")} · ${esc((ST[ses.state] || ses.state || "—"))}</div>
+          <div class="kpis">
+            <div class="kpi"><span>P&amp;L du jour</span><b class="${cls(C.pnl_day)}">${sg(C.pnl_day, 2, " €")}</b></div>
+            <div class="kpi"><span>Frais</span><b>${eur(C.fees)}</b></div>
+            <div class="kpi"><span>Liquidités</span><b>${eur(C.cash, 0)}</b></div>
+            <div class="kpi"><span>Trades clos</span><b>${s.n || 0}</b></div>
+            <div class="kpi"><span>Réussite</span><b>${s.win_rate == null ? "—" : nf(s.win_rate, 0) + " %"}</b></div>
+            <div class="kpi"><span>Bitcoin</span><b class="${cls(C.bench && C.bench.since_start_pct)}">${C.bench && C.bench.since_start_pct != null ? sg(C.bench.since_start_pct, 2, " %") : "—"}</b></div>
+          </div>
+          <div class="note">Carnet fictif distinct des actions (1 000 €). BTC et ETH uniquement, day trading 7j/7, clôture forcée à 23h50 heure de Paris.</div>
+        </article>
+        <article class="panel curve">
+          <div class="ph"><h2>COURBE CRYPTO</h2><span class="hint">vs Bitcoin buy &amp; hold · % depuis le lancement</span></div>
+          <div class="chart" style="min-height:200px">${chartHtml}</div>
+          <div class="legend"><span><i style="background:#ffb000"></i>Portefeuille crypto<b class="${cls(last)}">${last == null ? "—" : sg(last, 2, " %")}</b></span>
+            <span><i style="background:#5aa9ff"></i>Bitcoin (buy &amp; hold)<b class="${cls(btcPct)}">${btcPct == null ? "—" : sg(btcPct, 2, " %")}</b></span></div>
+        </article>
+      </section>
+      <article class="panel"><div class="ph"><h2>POSITIONS CRYPTO</h2><span class="hint">${P.length} / ${r.max_open_positions || 2} max · TP1 50 % à 1R, TP2 2,5R ou VWAP 00h00 · flatten 23h50</span></div>
+        ${P.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Entrée</th><th>Dernier</th><th>Stop</th><th>TP1 / TP2</th><th>Montant</th><th>P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>`
+          : empty("Aucune position crypto ouverte", "Le bot n'entre qu'entre 00h30 et 23h20, si le setup technique et le risque sont validés. Tout est fermé à 23h50.")}</article>
+      <div class="grid2">
+        <article class="panel"><div class="ph"><h2>DERNIERS SETUPS</h2><span class="hint">cycle ${esc(hm((C.scan && C.scan.ts) || C.last_cycle && C.last_cycle.ts))}</span></div>
+          ${decCards || (scanRows ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Cours</th><th>Tech</th><th>Setup</th></tr></thead><tbody>${scanRows}</tbody></table></div>` : empty("Pas encore de setup", "Les cycles tournent toutes les 5 minutes pendant la séance crypto."))}</article>
+        <article class="panel"><div class="ph"><h2>RÈGLES CRYPTO</h2><span class="hint">même philosophie que les actions, carnet à part</span></div>
+          <div class="rules">${[r.exits, r.fees_desc, `Risque ${r.risk_per_trade_pct || 1.5} % par trade · plafond ${r.max_position_pct || 35} % · max ${r.max_open_positions || 2} positions · stop journalier −${r.daily_loss_limit_pct || 3} % · pas d'entrée après ${r.no_entry_after || "23:20"} ni avant ${r.open || "00:30"}.`].filter(Boolean).map(x => `<p>${esc(x)}</p>`).join("")}</div></article>
+      </div>
+      <article class="panel"><div class="ph"><h2>JOURNAL CRYPTO</h2><span class="hint">${T.length} trade(s) clos</span></div>
+        ${T.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Ouvert / clos</th><th>Entrée</th><th>Sortie</th><th>Montant</th><th>Frais</th><th>P&amp;L net</th><th style="text-align:left">Sortie</th></tr></thead><tbody>${trows}</tbody></table></div>`
+          : empty("Aucun trade crypto clos", "Les sorties (TP1, TP2, stop, VWAP, 23h50) apparaîtront ici, avec les frais IBKR.")}</article>`;
+  }
+
   function render() {
-    renderTape(); renderStatus(); renderCapital(); renderChart(); renderPortfolio(); renderSignals(); renderJournal(); renderMarket(); renderTeam();
+    renderTape(); renderStatus(); renderCapital(); renderChart(); renderPortfolio(); renderSignals(); renderJournal(); renderMarket(); renderTeam(); renderCrypto();
   }
 
   async function load() {
