@@ -1,5 +1,5 @@
 /* Équipe Nexus — service worker : coque hors ligne (cache d'abord), données en réseau d'abord. */
-const V = "nexus-v8";
+const V = "nexus-v9";
 const SHELL = ["./", "index.html", "style.css", "app.js", "vendor/lightweight-charts.js", "manifest.json", "icons/icon-192.png", "icons/icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {

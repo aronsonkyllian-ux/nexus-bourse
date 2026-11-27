@@ -276,3 +276,9 @@ body.chart-open{overflow:hidden}
 .grid-events li{padding:8px 0;border-bottom:1px solid #161a23;font:500 12px/1.4 var(--sans);color:var(--txt)}
 .grid-events li small{display:block;color:var(--mut);font:500 11px var(--mono);margin-bottom:2px}
 .grid-events .act{font:700 10px var(--mono);letter-spacing:.08em;color:var(--amb);margin-right:6px}
+
+.grid-reg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 6px}
+.grid-flag.regime-range{color:#d5e4ff;background:rgba(80,120,200,.25);border:1px solid rgba(120,160,230,.35)}
+.grid-flag.regime-healthy_pullback{color:#1a1400;background:var(--amb)}
+.grid-flag.regime-real_downtrend{color:#ffb3ba;background:rgba(255,77,94,.18);border:1px solid rgba(255,77,94,.4)}
+.grid-flag.regime-rebound{color:#0e2a1a;background:var(--up)}

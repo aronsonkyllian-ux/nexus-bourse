@@ -235,12 +235,16 @@
     const items = G.items || [];
     if (!G.enabled && !items.length) return "";
     const stLab = { running: "EN COURS", paused: "PAUSE", stopped: "STOP" };
+    const rgLab = { range: "dans la fourchette", healthy_pullback: "repli sain", real_downtrend: "tendance baissière", rebound: "rebond confirmé" };
     const cards = items.map(g => {
       const st = g.status || "running";
+      const rg = g.regime || "";
+      const rgTxt = g.regime_label || rgLab[rg] || "";
       return `<button type="button" class="grid-card" data-grid="${esc(g.symbol)}">
         <div class="grid-card-h"><span class="sym">${esc(g.symbol)}${mk("CRYPTO")}</span>
           <span class="grid-flag ${esc(st)}">${esc(stLab[st] || st)}</span></div>
-        <div class="grid-meta">${esc(g.name || "")} · budget ${eur(g.capital_eur, 0)} · ${g.n_levels || 0} niveaux · pas ${nf(g.step_pct, 2)} %</div>
+        ${rgTxt ? `<div class="grid-reg"><span class="grid-flag regime-${esc(rg)}">${esc(rgTxt)}</span></div>` : ""}
+        <div class="grid-meta">${esc(g.name || "")} · budget ${eur(g.capital_eur, 0)} · ${g.n_levels || 0} niveaux · pas ${nf(g.step_pct, 2)} %${g.avg_entry ? " · px moyen " + px(g.avg_entry, "CRYPTO") : ""}</div>
         <div class="grid-row">
           <div class="grid-px">${g.last != null ? px(g.last, "CRYPTO") : "—"}</div>
           <div class="live-pnl ${cls(g.pnl_eur)}">${sg(g.pnl_eur, 2, " €")}<small>${sg(g.pnl_pct, 2, " %")} · réalisé ${sg(g.realized_pnl_eur, 2, " €")}</small></div>
@@ -262,7 +266,7 @@
         ${items.length ? `<div class="grid-cards" id="grid-cards">${cards}</div>` : empty("Grilles en cours d'initialisation", "Le moteur calcule une fourchette sur la volatilité 1 h au prochain cycle.")}
         ${rules ? `<div class="note">${esc(rules)}</div>` : ""}
       </article>
-      <article class="panel"><div class="ph"><h2>DÉCISIONS DU SURVEILLANT</h2><span class="hint">pause, recentrage, stop, gains verrouillés</span></div>
+      <article class="panel"><div class="ph"><h2>DÉCISIONS DU SURVEILLANT</h2><span class="hint">régime, descente, pause, rebond, stop, gains verrouillés</span></div>
         ${evHtml}</article>`;
   }
 
