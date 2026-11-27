@@ -254,3 +254,25 @@ body.chart-open{overflow:hidden}
   .pos-chart-panel{border-radius:0;width:100%;height:100%}
   .pos-chart-canvas{height:auto;flex:1;min-height:0}
 }
+
+/* ---------- grilles crypto ---------- */
+.grid-cards{display:grid;gap:10px;margin:4px 0 8px}
+@media (min-width:720px){.grid-cards{grid-template-columns:repeat(2,1fr)}}
+.grid-card{display:block;width:100%;text-align:left;padding:12px 14px 10px;border-radius:14px;
+  background:linear-gradient(180deg,#141821,#10131a);border:1px solid var(--line2);color:inherit;cursor:pointer}
+.grid-card:hover,.grid-card:active{border-color:rgba(255,176,0,.45)}
+.grid-card-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.grid-flag{font:700 9px var(--mono);letter-spacing:.12em;padding:3px 7px;border-radius:999px;text-transform:uppercase}
+.grid-flag.running{color:#0e2a1a;background:var(--up)}
+.grid-flag.paused{color:#1a1400;background:var(--amb)}
+.grid-flag.stopped{color:#ffb3ba;background:rgba(255,77,94,.18);border:1px solid rgba(255,77,94,.4)}
+.grid-meta{font:500 11.5px/1.4 var(--sans);color:var(--mut);margin:4px 0 8px}
+.grid-row{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.grid-px{font:700 22px/1 var(--mono)}
+.grid-lvls{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:8px;font:500 11px var(--mono);color:var(--mut)}
+.grid-lvls b{color:var(--txt)}
+.grid-decision{margin-top:8px;font:500 11.5px/1.4 var(--sans);color:var(--mut);border-top:1px solid var(--line);padding-top:8px}
+.grid-events{list-style:none;margin:0;padding:0}
+.grid-events li{padding:8px 0;border-bottom:1px solid #161a23;font:500 12px/1.4 var(--sans);color:var(--txt)}
+.grid-events li small{display:block;color:var(--mut);font:500 11px var(--mono);margin-bottom:2px}
+.grid-events .act{font:700 10px var(--mono);letter-spacing:.08em;color:var(--amb);margin-right:6px}

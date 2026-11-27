@@ -226,6 +226,46 @@
   }
 
 
+
+  function gridOf(sym) {
+    return ((D && D.crypto && D.crypto.grids && D.crypto.grids.items) || []).find(g => g.symbol === sym);
+  }
+  function gridsHtml(C) {
+    const G = C.grids || {};
+    const items = G.items || [];
+    if (!G.enabled && !items.length) return "";
+    const stLab = { running: "EN COURS", paused: "PAUSE", stopped: "STOP" };
+    const cards = items.map(g => {
+      const st = g.status || "running";
+      return `<button type="button" class="grid-card" data-grid="${esc(g.symbol)}">
+        <div class="grid-card-h"><span class="sym">${esc(g.symbol)}${mk("CRYPTO")}</span>
+          <span class="grid-flag ${esc(st)}">${esc(stLab[st] || st)}</span></div>
+        <div class="grid-meta">${esc(g.name || "")} · budget ${eur(g.capital_eur, 0)} · ${g.n_levels || 0} niveaux · pas ${nf(g.step_pct, 2)} %</div>
+        <div class="grid-row">
+          <div class="grid-px">${g.last != null ? px(g.last, "CRYPTO") : "—"}</div>
+          <div class="live-pnl ${cls(g.pnl_eur)}">${sg(g.pnl_eur, 2, " €")}<small>${sg(g.pnl_pct, 2, " %")} · réalisé ${sg(g.realized_pnl_eur, 2, " €")}</small></div>
+        </div>
+        <div class="grid-lvls">
+          <span>Bas <b>${px(g.lower, "CRYPTO")}</b></span>
+          <span>Haut <b>${px(g.upper, "CRYPTO")}</b></span>
+          <span>Stock <b>${g.n_lots || 0}</b> lot${(g.n_lots||0)>1?"s":""} · ${eur(g.inventory_cost_eur, 0)}</span>
+          ${(g.locked_eur||0)>0 ? `<span>Verrouillé <b>${eur(g.locked_eur)}</b></span>` : ""}
+        </div>
+        <div class="grid-decision">${g.last_decision ? `<b>${esc(g.last_decision)}</b> · ${esc(dhm(g.last_decision_at))} — ${esc(g.pause_reason || (G.events||[]).find(e => e.symbol===g.symbol && e.action===g.last_decision)?.reason || "toucher pour le graphique")}` : "Toucher pour le graphique des niveaux"}</div>
+      </button>`;
+    }).join("");
+    const ev = (G.events || []).filter(e => e.action !== "buy" && e.action !== "sell").slice(0, 12);
+    const evHtml = ev.length ? `<ul class="grid-events">${ev.map(e => `<li><small>${esc(dhm(e.ts))} · ${esc(e.symbol)}</small><span class="act">${esc((e.action||"").toUpperCase())}</span>${esc(e.reason || "")}</li>`).join("")}</ul>` : `<div class="empty">Le surveillant n'a pas encore pris de décision.</div>`;
+    const rules = (G.rules && G.rules.text) || "";
+    return `
+      <article class="panel"><div class="ph"><h2>GRILLES + SURVEILLANT</h2><span class="hint">4 paires · 250 € chacune · liquidités partagées avec le day trading · toucher pour le graphique</span></div>
+        ${items.length ? `<div class="grid-cards" id="grid-cards">${cards}</div>` : empty("Grilles en cours d'initialisation", "Le moteur calcule une fourchette sur la volatilité 1 h au prochain cycle.")}
+        ${rules ? `<div class="note">${esc(rules)}</div>` : ""}
+      </article>
+      <article class="panel"><div class="ph"><h2>DÉCISIONS DU SURVEILLANT</h2><span class="hint">pause, recentrage, stop, gains verrouillés</span></div>
+        ${evHtml}</article>`;
+  }
+
   function renderCrypto() {
     const C = D.crypto || {};
     const box = $("#tab-crypto");
@@ -273,6 +313,7 @@
       ${d.entry ? `<div class="meta" style="margin-top:6px">Plan : entrée ${px(d.entry, "CRYPTO")} · stop ${px(d.stop, "CRYPTO")} · ${d.tp1 != null ? `TP1 ${px(d.tp1, "CRYPTO")} (50 %) · TP2 ${px(d.tp2, "CRYPTO")}` : `objectif ${px(d.target, "CRYPTO")}`}</div>` : ""}
     </div>`).join("");
     box.innerHTML = `
+      ${gridsHtml(C)}
       <section class="hero" style="margin-bottom:16px">
         <article class="panel capital">
           <div class="cap-l">CAPITAL CRYPTO · PAPIER SÉPARÉ · ${esc(C.broker || r.broker || "OKX Europe (simulation papier)")}</div>
@@ -308,6 +349,9 @@
       <article class="panel"><div class="ph"><h2>JOURNAL CRYPTO</h2><span class="hint">${T.length} trade(s) clos</span></div>
         ${T.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>Titre</th><th>Ouvert / clos</th><th>Entrée</th><th>Sortie</th><th>Montant</th><th>Frais</th><th>P&amp;L net</th><th style="text-align:left">Sortie</th></tr></thead><tbody>${trows}</tbody></table></div>`
           : empty("Aucun trade crypto clos", "Les sorties (TP1, TP2, stop, VWAP, 23h50) apparaîtront ici, avec les frais OKX Europe.")}</article>`;
+    document.querySelectorAll("#tab-crypto [data-grid]").forEach(el => {
+      el.addEventListener("click", () => openGridChart(el.dataset.grid));
+    });
   }
 
 
@@ -550,7 +594,16 @@
     const tp2 = p.tp2 != null ? p.tp2 : p.target;
     if (tp2 != null) lines.push({ price: tp2, color: "#21d07a", title: "TP2", lineWidth: 2, lineStyle: 0 });
     const vwap = vwapFromBars(chartBars);
-    if (vwap) lines.push({ price: vwap, color: "#5aa9ff", title: "VWAP", lineWidth: 1, lineStyle: 2 });
+    if (vwap && !p._gridOnly) lines.push({ price: vwap, color: "#5aa9ff", title: "VWAP", lineWidth: 1, lineStyle: 2 });
+    const g = p._grid || gridOf(p.symbol);
+    if (g) {
+      if (g.lower != null) lines.push({ price: g.lower, color: "#ff4d5e", title: "BAS", lineWidth: 1, lineStyle: 2 });
+      if (g.upper != null) lines.push({ price: g.upper, color: "#21d07a", title: "HAUT", lineWidth: 1, lineStyle: 2 });
+      (g.levels || []).forEach(lv => {
+        const col = lv.kind === "held" ? "#ffb000" : lv.kind === "buy" ? "#5aa9ff" : "rgba(33,208,122,.45)";
+        lines.push({ price: lv.price, color: col, title: "", lineWidth: 1, lineStyle: 3, axisLabelVisible: false });
+      });
+    }
     lines.forEach(l => { if (l.price != null) series.createPriceLine(l); });
   }
   function entryMarker(p, bars) {
@@ -619,6 +672,9 @@
       const vals = [];
       bars.forEach(b => { vals.push(b.high, b.low); });
       [p.entry, p.stop, p.tp1, p.tp2, p.target].forEach(v => { if (v != null && isFinite(+v)) vals.push(+v); });
+      const g = p._grid || gridOf(p.symbol);
+      if (g) { [g.lower, g.upper, g.last].forEach(v => { if (v != null && isFinite(+v)) vals.push(+v); });
+        (g.levels || []).forEach(lv => { if (lv && lv.price != null) vals.push(+lv.price); }); }
       const vw = vwapFromBars(bars); if (vw != null) vals.push(vw);
       const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
       const pad = (hi - lo) * 0.06 || Math.abs(lo) * 0.002;
@@ -635,6 +691,29 @@
     if (mk.length) candleSeries.setMarkers(mk);
     chartApi.timeScale().fitContent();
     requestAnimationFrame(() => { if (chartApi) { chartApi.applyOptions({ width: el.clientWidth, height: el.clientHeight }); chartApi.timeScale().fitContent(); } });
+  }
+
+  async function openGridChart(sym) {
+    const g = gridOf(sym);
+    if (!g) return;
+    const p = { symbol: g.symbol, name: g.name, market: "CRYPTO", entry: g.last, last: g.last,
+      shares: 0, _grid: g, _gridOnly: true, setup: "grille", pnl_eur: g.pnl_eur, pnl_pct: g.pnl_pct,
+      opened_at: g.opened_at };
+    chartSym = "grid:" + sym;
+    const box = $("#pos-chart");
+    box.hidden = false;
+    document.body.classList.add("chart-open");
+    $("#pos-chart-title").textContent = g.symbol + (g.name ? " · " + g.name : "") + " · grille";
+    const st = g.status === "running" ? "EN COURS" : g.status === "paused" ? "PAUSE" : "STOP";
+    $("#pos-chart-sub").textContent = "bougies 5 minutes · " + st + " · pas " + nf(g.step_pct, 2) + " %";
+    $("#pos-chart-px").innerHTML = `${g.last != null ? px(g.last, "CRYPTO") : "—"} <small class="${cls(g.pnl_eur)}">${sg(g.pnl_eur, 2, " €")} · ${sg(g.pnl_pct, 2, " %")}</small>`;
+    $("#pos-chart-legend").innerHTML = `<span><i class="sl"></i>Bas ${px(g.lower, "CRYPTO")}</span><span><i class="tp"></i>Haut ${px(g.upper, "CRYPTO")}</span><span><i class="entry"></i>Stock ${g.n_lots || 0} lots</span><span><i class="vwap"></i>Niveaux d'achat / vente</span>`;
+    const el = $("#pos-chart-canvas");
+    el.innerHTML = `<div class="empty" style="padding:24px">Chargement du graphique…</div>`;
+    chartBars = await loadCryptoBars(p);
+    chartBars = applyLiveToLastBar(chartBars, g.last);
+    renderChartLib(el, chartBars, p);
+    startLiveTimer();
   }
   async function openPosChart(sym) {
     const p = allPositions().find(x => x.symbol === sym);
@@ -658,6 +737,16 @@
     startLiveTimer();
   }
   function refreshOpenChart() {
+    if (chartSym && String(chartSym).startsWith("grid:")) {
+      const g = gridOf(chartSym.slice(5));
+      if (!g) { closePosChart(); return; }
+      $("#pos-chart-px").innerHTML = `${g.last != null ? px(g.last, "CRYPTO") : "—"} <small class="${cls(g.pnl_eur)}">${sg(g.pnl_eur, 2, " €")} · ${sg(g.pnl_pct, 2, " %")}</small>`;
+      if (chartBars.length && g.last != null) {
+        chartBars = applyLiveToLastBar(chartBars, g.last);
+        if (candleSeries) { try { candleSeries.update(chartBars[chartBars.length - 1]); } catch (e) {} }
+      }
+      return;
+    }
     const p = allPositions().find(x => x.symbol === chartSym);
     if (!p) { closePosChart(); return; }
     const m = mergeLive(p);
