@@ -589,6 +589,16 @@
     last.low = Math.min(last.low, price);
     return bars.slice(0, -1).concat([last]);
   }
+
+  function vpLevels(p) {
+    if (!p || p.market === "CRYPTO" || p._gridOnly) return null;
+    const ch = ((LIVE || {}).charts || {})[p.symbol] || {};
+    const poc = ch.poc != null ? ch.poc : p.poc;
+    const vah = ch.vah != null ? ch.vah : p.vah;
+    const val = ch.val != null ? ch.val : p.val;
+    if (poc == null && vah == null && val == null) return null;
+    return { poc, vah, val };
+  }
   function priceLines(series, p) {
     const lines = [
       { price: p.entry, color: "#ffb000", title: "ENTRÉE", lineWidth: 2, lineStyle: 0 },
@@ -599,6 +609,12 @@
     if (tp2 != null) lines.push({ price: tp2, color: "#21d07a", title: "TP2", lineWidth: 2, lineStyle: 0 });
     const vwap = vwapFromBars(chartBars);
     if (vwap && !p._gridOnly) lines.push({ price: vwap, color: "#5aa9ff", title: "VWAP", lineWidth: 1, lineStyle: 2 });
+    const vp = vpLevels(p);
+    if (vp) {
+      if (vp.val != null) lines.push({ price: vp.val, color: "#b794f4", title: "VAL", lineWidth: 1, lineStyle: 2 });
+      if (vp.poc != null) lines.push({ price: vp.poc, color: "#f0c14b", title: "POC", lineWidth: 1, lineStyle: 0 });
+      if (vp.vah != null) lines.push({ price: vp.vah, color: "#b794f4", title: "VAH", lineWidth: 1, lineStyle: 2 });
+    }
     const g = p._grid || gridOf(p.symbol);
     if (g) {
       if (g.lower != null) lines.push({ price: g.lower, color: "#ff4d5e", title: "BAS", lineWidth: 1, lineStyle: 2 });
@@ -636,14 +652,15 @@
     if (!bars.length) { c.fillStyle = "#8a909e"; c.font = "13px sans-serif"; c.fillText("Pas de barres 5 min pour le moment.", 16, 40); return; }
     const padL = 8, padR = 58, padT = 16, padB = 24;
     let lo = Math.min(...bars.map(b => b.low)), hi = Math.max(...bars.map(b => b.high));
-    [p.entry, p.stop, p.tp1, p.tp2 || p.target, vwapFromBars(bars)].forEach(v => { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+    const _vp = vpLevels(p);
+    [p.entry, p.stop, p.tp1, p.tp2 || p.target, vwapFromBars(bars), _vp && _vp.poc, _vp && _vp.vah, _vp && _vp.val].forEach(v => { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
     const span = (hi - lo) || 1; lo -= span * 0.04; hi += span * 0.04;
     const X = i => padL + i / Math.max(1, bars.length - 1) * (W - padL - padR);
     const Y = v => padT + (hi - v) / (hi - lo) * (H - padT - padB);
-    const levels = [["#ffb000", p.entry, "ENTRÉE"], ["#ff4d5e", p.stop, "SL"], ["#21d07a", p.tp1, "TP1"], ["#21d07a", p.tp2 != null ? p.tp2 : p.target, "TP2"], ["#5aa9ff", vwapFromBars(bars), "VWAP"]];
+    const levels = [["#ffb000", p.entry, "ENTRÉE"], ["#ff4d5e", p.stop, "SL"], ["#21d07a", p.tp1, "TP1"], ["#21d07a", p.tp2 != null ? p.tp2 : p.target, "TP2"], ["#5aa9ff", vwapFromBars(bars), "VWAP"], ["#f0c14b", _vp && _vp.poc, "POC"], ["#b794f4", _vp && _vp.vah, "VAH"], ["#b794f4", _vp && _vp.val, "VAL"]];
     levels.forEach(([col, v, lab]) => {
       if (v == null) return;
-      c.strokeStyle = col; c.globalAlpha = 0.9; c.setLineDash(lab === "VWAP" || lab === "TP1" ? [5, 4] : []);
+      c.strokeStyle = col; c.globalAlpha = 0.9; c.setLineDash(lab === "VWAP" || lab === "TP1" || lab === "VAH" || lab === "VAL" ? [5, 4] : []);
       c.beginPath(); c.moveTo(padL, Y(v)); c.lineTo(W - padR, Y(v)); c.stroke(); c.setLineDash([]);
       c.globalAlpha = 1; c.fillStyle = col; c.font = "10px monospace"; c.fillText(lab, W - padR + 4, Y(v) + 3);
     });
@@ -680,6 +697,7 @@
       if (g) { [g.lower, g.upper, g.last].forEach(v => { if (v != null && isFinite(+v)) vals.push(+v); });
         (g.levels || []).forEach(lv => { if (lv && lv.price != null) vals.push(+lv.price); }); }
       const vw = vwapFromBars(bars); if (vw != null) vals.push(vw);
+      const vp = vpLevels(p); if (vp) { [vp.poc, vp.vah, vp.val].forEach(v => { if (v != null && isFinite(+v)) vals.push(+v); }); }
       const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
       const pad = (hi - lo) * 0.06 || Math.abs(lo) * 0.002;
       return { minValue: lo - pad, maxValue: hi + pad };
@@ -731,7 +749,9 @@
     const lab = liveLabel(m.src, m.delay_min, p.market);
     $("#pos-chart-sub").textContent = "bougies 5 minutes · " + lab.text + (p.setup ? " · " + p.setup : "");
     $("#pos-chart-px").innerHTML = `${px(m.price, p.market)} <small class="${cls(m.pnl)}">${sg(m.pnl, 2, " €")} · ${sg(m.pct, 2, " %")}</small>`;
-    $("#pos-chart-legend").innerHTML = `<span><i class="entry"></i>Entrée ${px(p.entry, p.market)}</span><span><i class="sl"></i>Stop ${px(p.stop, p.market)}</span>${p.tp1 != null ? `<span><i class="tp"></i>TP1 ${px(p.tp1, p.market)}</span>` : ""}<span><i class="tp"></i>TP2 ${px(p.tp2 != null ? p.tp2 : p.target, p.market)}</span><span><i class="vwap"></i>VWAP</span>`;
+    const vpL = vpLevels(p);
+    const vpLeg = (p.market !== "CRYPTO" && vpL) ? `${vpL.poc != null ? `<span><i class="poc"></i>POC ${px(vpL.poc, p.market)}</span>` : ""}${vpL.vah != null ? `<span><i class="vah"></i>VAH ${px(vpL.vah, p.market)}</span>` : ""}${vpL.val != null ? `<span><i class="val"></i>VAL ${px(vpL.val, p.market)}</span>` : ""}` : "";
+    $("#pos-chart-legend").innerHTML = `<span><i class="entry"></i>Entrée ${px(p.entry, p.market)}</span><span><i class="sl"></i>Stop ${px(p.stop, p.market)}</span>${p.tp1 != null ? `<span><i class="tp"></i>TP1 ${px(p.tp1, p.market)}</span>` : ""}<span><i class="tp"></i>TP2 ${px(p.tp2 != null ? p.tp2 : p.target, p.market)}</span><span><i class="vwap"></i>VWAP</span>${vpLeg}`;
     const el = $("#pos-chart-canvas");
     el.innerHTML = `<div class="empty" style="padding:24px">Chargement du graphique…</div>`;
     if (p.market !== "CRYPTO") { try { await fetchLiveJson(); } catch (e) {} }

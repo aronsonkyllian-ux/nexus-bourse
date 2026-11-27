@@ -246,6 +246,7 @@ details.why p{margin:5px 0} details.why b{color:var(--txt)}
 .pos-chart-legend i{display:inline-block;width:14px;height:2px;margin-right:6px;vertical-align:middle}
 .pos-chart-legend i.entry{background:var(--amb)} .pos-chart-legend i.sl{background:var(--dn)}
 .pos-chart-legend i.tp{background:var(--up)} .pos-chart-legend i.vwap{background:var(--blue)}
+.pos-chart-legend i.poc{background:#f0c14b} .pos-chart-legend i.vah,.pos-chart-legend i.val{background:#b794f4}
 body.chart-open{overflow:hidden}
 @media (max-width:560px){
   .live-blotter{padding:0 12px 4px}
