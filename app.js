@@ -592,10 +592,12 @@
 
   function vpLevels(p) {
     if (!p || p.market === "CRYPTO" || p._gridOnly) return null;
-    const ch = ((LIVE || {}).charts || {})[p.symbol] || {};
-    const poc = ch.poc != null ? ch.poc : p.poc;
-    const vah = ch.vah != null ? ch.vah : p.vah;
-    const val = ch.val != null ? ch.val : p.val;
+    const feed = (typeof liveFeed !== "undefined" && liveFeed) || {};
+    const ch = (feed.charts || {})[p.symbol] || {};
+    const mark = (feed.marks || []).find(x => x.symbol === p.symbol) || {};
+    const poc = ch.poc != null ? ch.poc : (mark.poc != null ? mark.poc : p.poc);
+    const vah = ch.vah != null ? ch.vah : (mark.vah != null ? mark.vah : p.vah);
+    const val = ch.val != null ? ch.val : (mark.val != null ? mark.val : p.val);
     if (poc == null && vah == null && val == null) return null;
     return { poc, vah, val };
   }
@@ -687,7 +689,7 @@
       localization: { locale: "fr-FR",
         timeFormatter: t => new Date(t * 1000).toLocaleTimeString("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }) },
       handleScroll: { vertTouchDrag: false },
-      width: el.clientWidth, height: el.clientHeight,
+      width: Math.max(el.clientWidth || 0, 320), height: Math.max(el.clientHeight || 0, 240),
     });
     const rng = (function(){
       const vals = [];
